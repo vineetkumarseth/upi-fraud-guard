@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UPI Fraud Guard — Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EFF3EC;
+    --paper-deep:#E6ECE2;
+    --rule:#C6D2C0;
+    --ink:#1B241C;
+    --ink-soft:#5B6B58;
+    --navy:#233B57;
+    --navy-deep:#182A40;
+    --allow:#1F6E43;
+    --review:#93650C;
+    --block:#9A2E24;
+    --gold:#A8791E;
+    --card:#F8FAF6;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:
+      repeating-linear-gradient(180deg, transparent, transparent 27px, rgba(75,95,70,0.055) 28px),
+      var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', sans-serif;
+    min-height:100vh;
+    padding:28px 20px 90px;
+  }
+  .display{ font-family:'Fraunces', serif; }
+  .mono{ font-family:'IBM Plex Mono', monospace; }
+
+  header{
+    max-width:1160px; margin:0 auto 28px;
+    display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:14px;
+    border-bottom:2px solid var(--ink);
+    padding-bottom:16px;
+  }
+  .brand{ display:flex; align-items:baseline; gap:12px; }
+  .brand h1{ font-size:26px; font-weight:600; letter-spacing:-0.01em; }
+  .brand .rupee{ font-size:26px; color:var(--navy); }
+  .brand-sub{
+    font-size:11.5px; text-transform:uppercase; letter-spacing:0.12em; color:var(--ink-soft);
+    border-left:2px solid var(--rule); padding-left:10px; margin-left:2px;
+  }
+  .status-pill{
+    display:flex; align-items:center; gap:7px;
+    font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--navy-deep);
+    background:var(--card); border:1px solid var(--ink); padding:6px 12px;
+  }
+  .dot{ width:7px; height:7px; border-radius:50%; background:var(--allow); }
+
+  main{ max-width:1160px; margin:0 auto; }
+
+  /* ---- Hero: based on YOUR live checks only ---- */
+  .hero{
+    display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; gap:0;
+    border:1px solid var(--ink); background:var(--card); margin-bottom:10px;
+  }
+  .hero > div{ padding:20px 22px; border-right:1px solid var(--rule); }
+  .hero > div:last-child{ border-right:none; }
+  .hero-eyebrow{ font-size:10.5px; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink-soft); margin-bottom:8px; }
+  .hero-value{ font-family:'Fraunces', serif; font-size:30px; font-weight:600; color:var(--navy-deep); line-height:1; }
+  .hero-value.flag{ color:var(--block); }
+  .hero-note{ font-size:12px; color:var(--ink-soft); margin-top:6px; }
+  .hero-caption{
+    max-width:1160px; margin:0 auto 26px; font-size:11.5px; color:var(--ink-soft);
+    font-family:'IBM Plex Mono', monospace;
+  }
+
+  /* ---- Layout ---- */
+  .grid{ display:grid; grid-template-columns:1.3fr 1fr; gap:24px; }
+  @media (max-width:920px){ .grid{ grid-template-columns:1fr; } }
+
+  .stack > * + *{ margin-top:20px; }
+
+  .panel{ border:1px solid var(--ink); background:var(--card); }
+  .panel-head{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:14px 20px; border-bottom:1px solid var(--ink);
+    font-size:11.5px; text-transform:uppercase; letter-spacing:0.1em; color:var(--ink-soft);
+  }
+  .panel-head .tag{
+    font-family:'IBM Plex Mono', monospace; font-size:9.5px; letter-spacing:0.06em;
+    padding:2px 7px; border:1px solid; text-transform:uppercase;
+  }
+  .tag-sample{ color:var(--ink-soft); border-color:var(--rule); }
+  .tag-live{ color:var(--navy-deep); border-color:var(--navy); }
+  .panel-note{
+    padding:10px 20px; font-size:11.5px; color:var(--ink-soft); border-bottom:1px dashed var(--rule);
+    background:var(--paper-deep);
+  }
+  .panel-body{ padding:6px 0; }
+  .panel-empty{ padding:26px 20px; font-size:12.5px; color:var(--ink-soft); }
+
+  /* ---- Ledger rows ---- */
+  .ledger-row{
+    display:grid; grid-template-columns:88px 1fr auto; gap:14px; align-items:center;
+    padding:13px 20px; border-bottom:1px dashed var(--rule);
+  }
+  .ledger-row:last-child{ border-bottom:none; }
+  .stamp{
+    display:inline-flex; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono', monospace; font-size:10px; font-weight:600;
+    letter-spacing:0.06em; text-transform:uppercase;
+    padding:5px 4px; border:1.5px solid; border-radius:3px;
+    transform:rotate(-3deg);
+  }
+  .stamp-allow{ color:var(--allow); border-color:var(--allow); }
+  .stamp-review{ color:var(--review); border-color:var(--review); }
+  .stamp-block{ color:var(--block); border-color:var(--block); }
+  .ledger-payee{ font-size:14px; font-weight:500; }
+  .ledger-meta{ font-size:11.5px; color:var(--ink-soft); font-family:'IBM Plex Mono', monospace; margin-top:2px; }
+  .ledger-amount{ font-family:'IBM Plex Mono', monospace; font-size:14.5px; text-align:right; white-space:nowrap; }
+
+  /* ---- Form (verdict slip) ---- */
+  label{
+    display:block; font-size:11px; text-transform:uppercase; letter-spacing:0.07em;
+    color:var(--ink-soft); margin:16px 20px 6px;
+  }
+  label:first-of-type{ margin-top:18px; }
+  .field-row{ padding:0 20px; }
+  input, select{
+    width:100%; background:var(--paper); border:1px solid var(--rule); color:var(--ink);
+    padding:9px 11px; font-family:'IBM Plex Mono', monospace; font-size:13px;
+    outline:none; transition:border-color .15s;
+  }
+  input:focus, select:focus{ border-color:var(--navy); }
+  .field-pair{ display:flex; gap:10px; padding:0 20px; }
+  .field-pair > div{ flex:1; }
+  .field-pair label{ margin:16px 0 6px; }
+
+  button.run{
+    margin:22px 20px 20px; width:calc(100% - 40px); padding:13px; border:none;
+    background:var(--navy-deep); color:var(--paper); font-weight:600; font-size:13.5px;
+    letter-spacing:0.04em; text-transform:uppercase; cursor:pointer; font-family:'IBM Plex Sans', sans-serif;
+    transition:background .15s;
+  }
+  button.run:hover{ background:var(--navy); }
+  button.run:active{ transform:translateY(1px); }
+
+  /* ---- Result: rubber-stamp verdict ---- */
+  .verdict{ margin:0 20px 20px; border-top:2px solid var(--ink); padding-top:18px; display:none; }
+  .verdict-seal{
+    display:inline-flex; flex-direction:column; align-items:center; justify-content:center;
+    width:104px; height:104px; border-radius:50%; border:3px double;
+    transform:rotate(-6deg); margin-bottom:14px;
+  }
+  .verdict-seal span:first-child{ font-family:'Fraunces', serif; font-size:13px; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; }
+  .verdict-seal span:last-child{ font-family:'IBM Plex Mono', monospace; font-size:17px; font-weight:600; margin-top:2px; }
+  .seal-allow{ color:var(--allow); border-color:var(--allow); }
+  .seal-review{ color:var(--review); border-color:var(--review); }
+  .seal-block{ color:var(--block); border-color:var(--block); }
+
+  .verdict-reasons{ list-style:none; }
+  .verdict-reasons li{
+    font-size:12.5px; color:var(--ink-soft); padding:7px 0; border-top:1px dashed var(--rule);
+    font-family:'IBM Plex Mono', monospace; line-height:1.5;
+  }
+
+  /* ---- How it works strip ---- */
+  .pipeline{
+    margin-top:26px; border:1px solid var(--ink); background:var(--card);
+    display:grid; grid-template-columns:repeat(3, 1fr);
+  }
+  .pipeline > div{ padding:18px 20px; border-right:1px solid var(--rule); }
+  .pipeline > div:last-child{ border-right:none; }
+  .pipeline-step{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--gold); letter-spacing:0.08em; margin-bottom:6px; }
+  .pipeline-title{ font-family:'Fraunces', serif; font-weight:600; font-size:15px; margin-bottom:6px; }
+  .pipeline-desc{ font-size:12.5px; color:var(--ink-soft); line-height:1.5; }
+
+  .sponsor-row{ display:flex; gap:7px; flex-wrap:wrap; padding:0 20px 20px; }
+  .sponsor-chip{
+    font-size:10px; padding:4px 9px; border:1px solid var(--navy); color:var(--navy-deep);
+    font-family:'IBM Plex Mono', monospace; text-transform:uppercase; letter-spacing:0.04em;
+  }
+
+  footer{ max-width:1160px; margin:30px auto 0; text-align:center; color:var(--ink-soft); font-size:11.5px; font-family:'IBM Plex Mono', monospace; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="rupee display">₹</span>
+    <h1>UPI Fraud Guard</h1>
+    <span class="brand-sub">Decode SIH 2026 · Bharat Pragati</span>
+  </div>
+  <div class="status-pill"><span class="dot"></span> MODEL ONLINE</div>
+</header>
+
+<main>
+  <div class="hero" id="hero"></div>
+  <div class="hero-caption">↑ figures reflect only the transactions <strong>you've checked live</strong> in this session — not the sample ledger below.</div>
+
+  <div class="grid">
+    <!-- Ledgers -->
+    <section class="stack">
+      <div class="panel">
+        <div class="panel-head">
+          <span>Live Checks <span class="tag tag-live">real · your model</span></span>
+          <span id="liveCount"></span>
+        </div>
+        <div class="panel-note">Every row here came from your XGBoost model + Tavily search, run just now via the form on the right.</div>
+        <div class="panel-body" id="liveFeed">
+          <div class="panel-empty">No live checks yet — fill in the form on the right and press "Stamp this transaction" to see a real prediction here.</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <span>Sample Ledger <span class="tag tag-sample">illustrative</span></span>
+          <span id="sampleCount"></span>
+        </div>
+        <div class="panel-note">Fixed example rows for layout purposes only — not generated by the model. Use Live Checks above for real results.</div>
+        <div class="panel-body" id="sampleFeedEl"></div>
+      </div>
+    </section>
+
+    <!-- Check a transaction -->
+    <section class="panel">
+      <div class="panel-head"><span>Verdict Slip — New Check</span></div>
+
+      <label>Payee UPI ID</label>
+      <div class="field-row"><input id="payee" value="unknown.merchant@upi" /></div>
+
+      <div class="field-pair">
+        <div>
+          <label>Amount (₹)</label>
+          <input id="amount" type="number" value="18500" />
+        </div>
+        <div>
+          <label>Avg. 7-day (₹)</label>
+          <input id="avg7d" type="number" value="650" />
+        </div>
+      </div>
+
+      <div class="field-pair">
+        <div>
+          <label>Txns / 1h</label>
+          <input id="cnt1h" type="number" value="2" />
+        </div>
+        <div>
+          <label>Txns / 24h</label>
+          <input id="cnt24h" type="number" value="6" />
+        </div>
+      </div>
+
+      <div class="field-pair">
+        <div>
+          <label>Hour of day</label>
+          <input id="hour" type="number" value="2" />
+        </div>
+        <div>
+          <label>New payee?</label>
+          <select id="newPayee"><option value="1">Yes</option><option value="0">No</option></select>
+        </div>
+      </div>
+
+      <div class="field-pair">
+        <div>
+          <label>Distance (km)</label>
+          <input id="distance" type="number" value="620" />
+        </div>
+        <div>
+          <label>Account age (days)</label>
+          <input id="accountAge" type="number" value="140" />
+        </div>
+      </div>
+
+      <button class="run" onclick="runCheck()">Stamp this transaction</button>
+
+      <div id="verdict" class="verdict">
+        <div id="sealBox"></div>
+        <ul class="verdict-reasons" id="reasonList"></ul>
+      </div>
+
+      <div class="sponsor-row">
+        <span class="sponsor-chip">Swytchcode</span>
+        <span class="sponsor-chip">Tavily</span>
+        <span class="sponsor-chip">n8n</span>
+        <span class="sponsor-chip">Render</span>
+        <span class="sponsor-chip">Codemate.ai</span>
+        <span class="sponsor-chip">Startuped</span>
+      </div>
+    </section>
+  </div>
+
+  <!-- How it works -->
+  <div class="pipeline">
+    <div>
+      <div class="pipeline-step">STEP 01</div>
+      <div class="pipeline-title">Model scores it</div>
+      <div class="pipeline-desc">An XGBoost classifier reads the transaction's pattern — amount vs. 7-day average, odd hours, new payee, distance jump — and returns a risk score with SHAP reasons, not a black box.</div>
+    </div>
+    <div>
+      <div class="pipeline-step">STEP 02</div>
+      <div class="pipeline-title">Web signal checked</div>
+      <div class="pipeline-desc">A Tavily search checks whether the payee ID has active scam reports right now, blending live web context into the score.</div>
+    </div>
+    <div>
+      <div class="pipeline-step">STEP 03</div>
+      <div class="pipeline-title">Alert dispatched</div>
+      <div class="pipeline-desc">If risk clears the threshold, an n8n workflow fires automatically — no manual review queue needed to catch it.</div>
+    </div>
+  </div>
+</main>
+
+<footer>UPI Fraud Guard — built for Decode SIH 2026 · API base configurable below</footer>
+
+<script>
+  const API_BASE = window.API_BASE || "http://localhost:8001";
+
+  // Fixed, illustrative only — never changes, never touched by real checks.
+  const sampleFeed = [
+    {payee:"rahul.kumar@okaxis", amount:450, risk:0.04, decision:"ALLOW"},
+    {payee:"newvendor2213@ybl", amount:38900, risk:0.81, decision:"BLOCK"},
+    {payee:"amit.stores@paytm", amount:1200, risk:0.11, decision:"ALLOW"},
+    {payee:"quick.cashback@oksbi", amount:15750, risk:0.58, decision:"REVIEW"},
+    {payee:"priya.singh@okicici", amount:600, risk:0.06, decision:"ALLOW"},
+  ];
+
+  // Real results only — starts empty, grows as the person runs live checks.
+  let liveChecks = [];
+
+  function stampClass(decision){
+    return decision === "ALLOW" ? "stamp-allow" : decision === "REVIEW" ? "stamp-review" : "stamp-block";
+  }
+  function sealClass(decision){
+    return decision === "ALLOW" ? "seal-allow" : decision === "REVIEW" ? "seal-review" : "seal-block";
+  }
+  function fmtRupee(n){ return "₹" + Number(n).toLocaleString('en-IN'); }
+
+  function rowHtml(t){
+    return `
+      <div class="ledger-row">
+        <span class="stamp ${stampClass(t.decision)}">${t.decision}</span>
+        <div>
+          <div class="ledger-payee">${t.payee}</div>
+          <div class="ledger-meta">risk ${t.risk.toFixed(2)}</div>
+        </div>
+        <div class="ledger-amount">${fmtRupee(t.amount)}</div>
+      </div>
+    `;
+  }
+
+  function renderHero(){
+    const flaggedTotal = liveChecks.filter(t => t.decision !== "ALLOW").reduce((s,t)=>s+t.amount, 0);
+    const blocked = liveChecks.filter(t => t.decision === "BLOCK").length;
+    const reviewed = liveChecks.filter(t => t.decision === "REVIEW").length;
+    document.getElementById('hero').innerHTML = `
+      <div>
+        <div class="hero-eyebrow">Flagged (live checks)</div>
+        <div class="hero-value flag">${fmtRupee(flaggedTotal)}</div>
+        <div class="hero-note">across ${blocked + reviewed} of your check(s)</div>
+      </div>
+      <div>
+        <div class="hero-eyebrow">Checked</div>
+        <div class="hero-value">${liveChecks.length}</div>
+        <div class="hero-note">transactions you've scored</div>
+      </div>
+      <div>
+        <div class="hero-eyebrow">Blocked</div>
+        <div class="hero-value">${blocked}</div>
+        <div class="hero-note">high-risk, stopped</div>
+      </div>
+      <div>
+        <div class="hero-eyebrow">Under review</div>
+        <div class="hero-value">${reviewed}</div>
+        <div class="hero-note">flagged for manual check</div>
+      </div>
+    `;
+  }
+
+  function renderSample(){
+    document.getElementById('sampleCount').textContent = sampleFeed.length + ' entries';
+    document.getElementById('sampleFeedEl').innerHTML = sampleFeed.map(rowHtml).join("");
+  }
+
+  function renderLive(){
+    document.getElementById('liveCount').textContent = liveChecks.length + ' entries';
+    const el = document.getElementById('liveFeed');
+    if(liveChecks.length === 0){
+      el.innerHTML = `<div class="panel-empty">No live checks yet — fill in the form on the right and press "Stamp this transaction" to see a real prediction here.</div>`;
+    } else {
+      el.innerHTML = liveChecks.map(rowHtml).join("");
+    }
+  }
+
+  renderHero();
+  renderSample();
+  renderLive();
+
+  async function runCheck(){
+    const payload = {
+      payee_upi_id: document.getElementById("payee").value,
+      amount: parseFloat(document.getElementById("amount").value),
+      avg_amount_7d: parseFloat(document.getElementById("avg7d").value),
+      txn_count_1h: parseInt(document.getElementById("cnt1h").value),
+      txn_count_24h: parseInt(document.getElementById("cnt24h").value),
+      hour_of_day: parseInt(document.getElementById("hour").value),
+      is_new_payee: parseInt(document.getElementById("newPayee").value),
+      distance_from_usual_location_km: parseFloat(document.getElementById("distance").value),
+      account_age_days: parseInt(document.getElementById("accountAge").value),
+    };
+
+    const verdictBox = document.getElementById("verdict");
+    verdictBox.style.display = "block";
+    document.getElementById("sealBox").innerHTML = `<div class="ledger-meta">Stamping…</div>`;
+    document.getElementById("reasonList").innerHTML = "";
+
+    try{
+      const res = await fetch(`${API_BASE}/agent/evaluate`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      document.getElementById("sealBox").innerHTML = `
+        <div class="verdict-seal ${sealClass(data.decision)}">
+          <span>Verdict</span>
+          <span>${data.decision}</span>
+        </div>
+      `;
+      document.getElementById("reasonList").innerHTML = `
+        <li>Blended risk: ${(data.blended_risk_score*100).toFixed(1)}%</li>
+        <li>Model score: ${(data.model_risk_score*100).toFixed(1)}%</li>
+        <li>Web signal: ${data.web_signal.summary}</li>
+        <li>Alert: ${data.alert_triggered ? (data.alert_triggered.sent ? "sent to n8n" : "not sent — " + (data.alert_triggered.reason||"")) : "not required"}</li>
+      `;
+
+      liveChecks.unshift({payee: payload.payee_upi_id, amount: payload.amount, risk: data.blended_risk_score, decision: data.decision});
+      renderHero();
+      renderLive();
+    }catch(e){
+      document.getElementById("sealBox").innerHTML = `<div class="ledger-meta" style="color:var(--block)">Could not reach API at ${API_BASE}. Start the backend or check API_BASE.</div>`;
+    }
+  }
+</script>
+
+</body>
+</html>

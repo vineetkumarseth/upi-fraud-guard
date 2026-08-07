@@ -1,0 +1,27 @@
+# Render Blueprint — deploys 2 services to satisfy the "Best Use of Render"
+# track requirement (must use more than one Render service type).
+#
+# Deploy: push this repo to GitHub, then in Render dashboard choose
+# "New +" -> "Blueprint" and point it at your repo. Render reads this file
+# and provisions both services automatically.
+
+services:
+  # 1. Backend API — Web Service (FastAPI + ML model)
+  - type: web
+    name: upi-fraud-guard-api
+    env: python
+    plan: free
+    buildCommand: "pip install -r backend/requirements.txt && python ml/train_model.py"
+    startCommand: "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: N8N_WEBHOOK_URL
+        sync: false
+
+  # 2. Frontend dashboard — Static Site
+  - type: web
+    name: upi-fraud-guard-dashboard
+    env: static
+    staticPublishPath: frontend
+    buildCommand: ""
