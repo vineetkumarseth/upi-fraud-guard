@@ -21,6 +21,9 @@ import os
 RANDOM_STATE = 42
 np.random.seed(RANDOM_STATE)
 
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_ARTIFACTS_DIR = os.path.join(SCRIPT_DIR, "..", "backend", "model_artifacts")
+
 FEATURE_COLUMNS = [
     "amount",
     "avg_amount_7d",
@@ -111,14 +114,10 @@ def train():
     print(classification_report(y_test, preds))
     print("ROC-AUC:", roc_auc_score(y_test, probs))
 
-    os.makedirs("../backend/model_artifacts", exist_ok=True)
-    joblib.dump(model, "../backend/model_artifacts/fraud_model.joblib")
+    os.makedirs(MODEL_ARTIFACTS_DIR, exist_ok=True)
+    joblib.dump(model, os.path.join(MODEL_ARTIFACTS_DIR, "fraud_model.joblib"))
 
-    # Precompute a SHAP explainer and save it for fast reuse in the API
-    explainer = shap.TreeExplainer(model)
-    joblib.dump(explainer, "../backend/model_artifacts/shap_explainer.joblib")
-
-    print("Saved model + explainer to backend/model_artifacts/")
+    print(f"Saved model to {MODEL_ARTIFACTS_DIR}/")
 
 
 if __name__ == "__main__":
